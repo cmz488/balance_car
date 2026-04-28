@@ -123,9 +123,9 @@ GRAY_HandleTypeDef hgray;
 GRAY_Data data;
 
 PID_t AnglePID = {
-  .Kp = 5.00f,
-  .Ki = 0.15f,
-  .Kd = 5.0f,
+  .Kp = 5,
+  .Ki = 0.1,
+  .Kd = 5,
 
   .OutMax = 100,
   .OutMin = -100,
@@ -137,21 +137,21 @@ PID_t AnglePID = {
 };
 
 PID_t SpeedPID = {
-  .Kp = 0.2f,
-  .Ki = 0.01f,
+  .Kp = 1.75f,
+  .Ki = 0.1f,
   .Kd = 0,
 
-  .OutMax = 6,
-  .OutMin = -6,
+  .OutMax = 15,
+  .OutMin = -15,
 
   .ErrorIntMax = 150,
   .ErrorIntMin = -150,
 };
 
 PID_t TurnPID = {
-  .Kp = 0.0f,
-  .Ki = 0.0f,
-  .Kd = 0.0f,
+  .Kp = 4,
+  .Ki = 3,
+  .Kd = 0,
 
   .OutMax = 50,
   .OutMin = -50,
@@ -278,7 +278,7 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  //定时器中断(1ms执行一次)过快会堵塞程序
+  //定时器中断(10ms执行一次)过快会堵塞程序
 
   if (htim->Instance == TIM5) {
     HAL_TIM_Base_Stop_IT(htim);
@@ -383,14 +383,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         /**********************电机控制**************************/
         AnglePID.Actual = Angle;
         PID_Update(&AnglePID);
-
         AvePWM = -AnglePID.Out;
 
-        LeftPWM = AvePWM + (DifPWM / 2);
-        RightPWM = AvePWM - (DifPWM / 2);
+        LeftPWM = AvePWM + DifPWM / 2;
+        RightPWM = AvePWM - DifPWM / 2;
 
-        if (LeftPWM > 100) { LeftPWM = 100; } else if (LeftPWM < -100) { LeftPWM = -100; }
-        if (RightPWM > 100) { RightPWM = 100; } else if (RightPWM < -100) { RightPWM = -100; }
+        if (LeftPWM > 100) {LeftPWM = 100;} else if (LeftPWM < -100) {LeftPWM = -100;}
+        if (RightPWM > 100) {RightPWM = 100;} else if (RightPWM < -100) {RightPWM = -100;}
 
         Motor_SetPWM(1, LeftPWM);
         Motor_SetPWM(2, RightPWM);
@@ -405,11 +404,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     SpeedCount++;
     if (SpeedCount >= 5) {
       SpeedCount = 0;
+      LeftSpeed = Encoder_Get(1) / 44.0 / 0.05 / 9.27666;
+      RightSpeed = Encoder_Get(2) / 44.0 / 0.05 / 9.27666;
 
-      LeftSpeed = (1.0f - speed_filter) * Encoder_Get(1) + speed_filter * LeftSpeed;
-      RightSpeed = (1.0f - speed_filter) * Encoder_Get(2) + speed_filter * RightSpeed;
-
-      AveSpeed = (LeftSpeed + RightSpeed) / 2.0f;
+      AveSpeed = (LeftSpeed + RightSpeed) / 2.0;
       DifSpeed = LeftSpeed - RightSpeed;
 
       SpeedPID.Actual = AveSpeed;
@@ -420,7 +418,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       PID_Update(&TurnPID);
       DifPWM = TurnPID.Out;
     }
-
     HAL_TIM_Base_Start_IT(htim);
   }
 }
