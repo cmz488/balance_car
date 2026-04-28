@@ -16,9 +16,6 @@ uint8_t key_get_state() {
   if (HAL_GPIO_ReadPin(BOTTON1_GPIO_Port, BOTTON1_Pin) == GPIO_PIN_SET) {
     return 1;
   }
-  if (HAL_GPIO_ReadPin(BOTTON0_GPIO_Port, BOTTON0_Pin) == GPIO_PIN_RESET) {
-    return 2;
-  }
   return 0;
 }
 

@@ -48,8 +48,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         BlueSerial/Src/Serial.c
         PWM/Inc/Motor.h
         BlueSerial/Inc/Serial.h
-       gray_sensor/Src/GraySensor.cpp
-       gray_sensor/Inc/GraySensor.h
+       #gray_sensor/Src/GraySensor.cpp
+       #gray_sensor/Inc/GraySensor.h
         Bsp/src/bsp_dwt.cpp
         #Task/Inc/Mpu6050Task.h
         #Task/Inc/KeyScan.h
@@ -78,6 +78,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         ChassisCtrl/Src/ChassisOutline.cpp
         ChassisCtrl/Src/ChassisOnline.cpp
         ChassisCtrl/Src/ChassisCtrl.cpp
+        gray_sensor/Src/grayscale_tracker.c
         # Task/Src/Debug.cpp
 )
 

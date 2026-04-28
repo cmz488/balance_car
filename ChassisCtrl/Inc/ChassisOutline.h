@@ -29,7 +29,7 @@ class ChassisOutline : public ChassisStrategy {
   PID_t turn_angle_pid_{};
   uint8_t is_first_outline_{1};
 public:
-  ChassisOutline(float target_speed, float diff_speed,float kp,float ki,float kd);
+  ChassisOutline(float target_speed,float kp,float ki,float kd);
   ~ChassisOutline() override = default;
   void update() override;
   void setOutlineMoveStrategy(OutlineMoveStrategy strategy) {outline_move_strategy = strategy;}

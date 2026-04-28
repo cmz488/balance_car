@@ -16,10 +16,11 @@ extern "C" {
 
 #ifdef __cplusplus
 class BUZZ {
-  public:
+public:
   BUZZ();
   ~BUZZ() = default;
   void ring();
+  void disable_ring();
 };
 #endif
 

@@ -45,10 +45,10 @@ void PID_Update(PID_t *p)
 
 void PID_Clear(PID_t *p) {
 	p->Out = 0;
+	p->Target = 0;
+	p->Actual = 0;
+	p->Actual1 = 0;
 	p->Error0 = 0;
 	p->Error1 = 0;
 	p->ErrorInt = 0;
-	p->Actual1 = 0;
-	p->Actual = 0;
-	p->Actual = 0;
 }

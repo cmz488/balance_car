@@ -33,8 +33,8 @@
 #include "math.h"
 #include "PID.h"
 #include "key.h"
-#include "GraySensor.h"
 #include "ChassisCtrl.h"
+#include "grayscale_tracker.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,17 +60,40 @@ const float Alpha = 0.01f; //融合滤波系数
 const float Gyro_to_real_degree = 0.06103515625f;
 const float Degree_to_rad = 0.017453292f;
 const float Rad_to_deg = 57.2957795f;
-const float speed_filter = 0.01f;
+const float speed_filter = 0.99f;
 uint8_t tim_flag = 0;
 int16_t gray_offset = 0;
 uint8_t gray_digital = 0;
 uint8_t outline_move_strategy_flag = 0; //0:过十字 1:直行
+int u_dd = 0; //记录接收字节数，测试用
+/**
+ * 1 => A 到 B；经过两间断点
+ *
+ * 2 => A 到 B 到 C; 三个间断点 （strait
+ *
+ * 2 => A 到 C到 B; 三个间断点 (cross
+ *
+ * 3 => 跑四圈 经过16个间断点
+ */
+uint8_t choose_topic = 0;
+uint8_t button_count = 0;
+uint8_t last_digital_flag = 1;
+uint8_t digital_flag = 1;
+uint8_t key_scan_count = 0;
+uint8_t SpeedCount = 0;
+uint8_t AngleCount = 0;
+uint8_t BuzzCount = 0;
+uint8_t LEDCount = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 
 /* USER CODE BEGIN PFP */
+extern void ring_on();
+
+extern void ring_off();
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -95,10 +118,14 @@ int16_t AvePWM, DifPWM;
 
 float LeftSpeed, RightSpeed;
 float AveSpeed, DifSpeed;
+/******灰度循迹全局变量*******/
+uint8_t rx_byte;
+GRAY_HandleTypeDef hgray;
+GRAY_Data data;
 
 PID_t AnglePID = {
   .Kp = 5.00f,
-  .Ki = 0.12f,
+  .Ki = 0.15f,
   .Kd = 5.0f,
 
   .OutMax = 100,
@@ -111,21 +138,21 @@ PID_t AnglePID = {
 };
 
 PID_t SpeedPID = {
-  .Kp = 0.008f,
-  .Ki = 0.00001f,
+  .Kp = 0.2f,
+  .Ki = 0.01f,
   .Kd = 0,
 
-  .OutMax = 10,
-  .OutMin = -10,
+  .OutMax = 6,
+  .OutMin = -6,
 
   .ErrorIntMax = 150,
   .ErrorIntMin = -150,
 };
 
 PID_t TurnPID = {
-  .Kp = 0,
+  .Kp = 0.0f,
   .Ki = 0.0f,
-  .Kd = 0,
+  .Kd = 0.0f,
 
   .OutMax = 50,
   .OutMin = -50,
@@ -158,7 +185,6 @@ int main(void) {
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  BSP_DWT_Init();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -171,13 +197,16 @@ int main(void) {
   MX_USART3_UART_Init();
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
-  gray_sensor_init();
+  BSP_DWT_Init();
+  //gray_sensor_init();
+  GRAY_Init(&hgray);
+  //HAL_UARTEx_ReceiveToIdle_DMA(&huart3, &rx_byte, 1);
+  HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
   Encoder_Init();
   MPU6050_Init();
   DWT_Delay_ms(500);
   Motor_Init();
-  uint8_t key_scan_count = 0;
-  uint8_t Count1 = 0;
+
 
   //  gray_sensor_init();
   //Serial_receive_init();
@@ -192,81 +221,8 @@ int main(void) {
 
   HAL_TIM_Base_Start_IT(&htim5);
   while (1) {
-    key_scan_count++;
-    if (key_scan_count >= 10) {
-      KeyNum = key_get_num();
-      key_scan_count = 0;
-      if (KeyNum == 1) {
-        RunFlag = !RunFlag;
-      } else if (KeyNum == 2) {
-        //button1 点击切换出线策略
-        outline_move_strategy_flag = !outline_move_strategy_flag;
-      }
-    }
-
     MPU6050_GetData(&AX, &AY, &AZ, &GX, &GY, &GZ);
 
-
-    if (RunFlag) {
-      if (outline_move_strategy_flag == 0) {
-        LED_ON(0);
-      } else if (outline_move_strategy_flag == 1) {
-        LED_OFF(1);
-      }
-      chassis_ctrl_update();
-      AnglePID.Actual = Angle-7.5f;
-      PID_Update(&AnglePID);
-
-      AvePWM = -AnglePID.Out;
-
-      LeftPWM = AvePWM + (DifPWM / 2);
-      RightPWM = AvePWM - (DifPWM / 2);
-
-      if (LeftPWM > 100) { LeftPWM = 100; } else if (LeftPWM < -100) { LeftPWM = -100; }
-      if (RightPWM > 100) { RightPWM = 100; } else if (RightPWM < -100) { RightPWM = -100; }
-
-      Motor_SetPWM(1, LeftPWM);
-      Motor_SetPWM(2, RightPWM);
-    } else {
-      Motor_SetPWM(1, 0);
-      Motor_SetPWM(2, 0);
-    }
-
-    Count1++;
-    if (Count1 >= 5) {
-      Count1 = 0;
-
-      LeftSpeed =  (1.0f-speed_filter)*Encoder_Get(1) +speed_filter*LeftSpeed;
-      RightSpeed =(1.0f-speed_filter)* Encoder_Get(2) +speed_filter*RightSpeed;
-
-      AveSpeed = (LeftSpeed + RightSpeed) / 2.0f;
-      DifSpeed = LeftSpeed - RightSpeed;
-
-
-
-      SpeedPID.Actual = AveSpeed;
-      PID_Update(&SpeedPID);
-      AnglePID.Target = SpeedPID.Out;
-
-      TurnPID.Actual = DifSpeed;
-      PID_Update(&TurnPID);
-      DifPWM = TurnPID.Out;
-    }
-    if (tim_flag == 1) {
-      tim_flag = 0;
-      GY -= 5;
-      AngleAcc = -atan2(AX, AZ) / 3.14159f * 180.0f;
-      AngleAcc -= 1.43f;
-      AngleGyro = Angle + GY * Gyro_to_real_degree * 0.01;
-      Angle = Alpha * AngleAcc + (1 - Alpha) * AngleGyro;
-      /********************yaw轴计算***********************/
-      if (GY < 8) {
-        GY_Bios = 0.01f*GY * Gyro_to_real_degree * 0.01+0.99f*GY_Bios;
-      }
-      Yaw -= GY_Bios;
-      Yaw = Yaw + GY * Gyro_to_real_degree * 0.01;
-
-    }
 
     /* USER CODE END WHILE */
 
@@ -322,13 +278,172 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   //定时器中断(10ms执行一次)过快会堵塞程序
 
   if (htim->Instance == TIM5) {
+    __HAL_TIM_DISABLE_IT(htim, TIM_IT_UPDATE);
     key_scan();
-    tim_flag = 1;
-    gray_digital = gray_sensor_get_digital();
-    gray_digital = gray_sensor_get_offset();
+    if (GRAY_IsDataReady(&hgray)) {
+      data = GRAY_GetData(&hgray);
+    }
+    /*******************处理按键操作***********************/
+    key_scan_count++;
+    if (key_scan_count >= 100) {
+      KeyNum = key_get_num();
+      key_scan_count = 0;
+      if (KeyNum == 1) {
+        button_count++;
+        button_count = button_count > 4 ? 0 : button_count;
+        switch (button_count) {
+          case 1:
+            choose_topic = 1; //经过两个间断点
+            outline_move_strategy_flag = 1;
+            break;
+          case 2:
+            choose_topic = 2; //经过三个间断点
+            outline_move_strategy_flag = 1; //straight
+            break;
+          case 3:
+            choose_topic = 2; //经过三个间断点
+            outline_move_strategy_flag = 0; //cross
+            break;
+          case 4:
+            choose_topic = 3; //经过16个间断点
+            outline_move_strategy_flag = 0; //cross
+            break;
+          default:
+            choose_topic = 0; //状态清零
+            outline_move_strategy_flag = 1; //straight
+        }
+        LED_OFF(0);
+        LED_OFF(1);
+      }
+    }
+    /*********************蜂鸣器逻辑*********************/
+    BuzzCount++;
+    if (BuzzCount >=100) {
+      BuzzCount = 0;
+      static uint8_t ring_count = 0;
+      if (data.digital != 0x00) {
+        digital_flag = 1;
+      } else {
+        digital_flag = 0;
+      }
+      if (digital_flag != last_digital_flag) {
+        ring_on();
+        ring_count = 11;
+        last_digital_flag = digital_flag;
+      }
+      if (ring_count > 0) ring_count--;
+      if (ring_count == 0) {
+        ring_off();
+      }
+    }
+    /*******************指示灯逻辑***********************/
+    LEDCount++;
+    if (LEDCount >= 100) {
+      LEDCount = 0;
+      switch (button_count) {
+        case 1:
+          LED_OFF(0);
+          LED_OFF(1);
+          break;
+        case 2:
+          LED_OFF(0);
+          LED_ON(1);
+          break;
+        case 3:
+          LED_ON(0);
+          LED_OFF(1);
+          break;
+        default:
+          LED_ON(0);
+          LED_ON(1);
+      }
+    }
+
+    AngleCount++;
+    if (AngleCount > 10) {
+      AngleCount= 0;
+      if (choose_topic) {
+        // choose_topic为0时停止，其他值时根据选择的模式运动
+
+
+        /*******************巡线逻辑封装***************************/
+        chassis_ctrl_update();
+        /********************计算欧拉角***********************/
+        //pitch计算
+        GY -= 15;
+        AngleAcc = -atan2(AX, AZ) / 3.14159f * 180.0f;
+        AngleAcc -= 2.43f;
+        AngleGyro = Angle + GY * Gyro_to_real_degree * 0.01;
+        Angle = Alpha * AngleAcc + (1 - Alpha) * AngleGyro;
+        //yaw计算
+        if (GY < 8) {
+          GY_Bios = 0.01f * GY * Gyro_to_real_degree * 0.01 + 0.99f * GY_Bios;
+        }
+        Yaw -= GY_Bios;
+        Yaw = Yaw + GY * Gyro_to_real_degree * 0.01;
+        /**********************电机控制**************************/
+        AnglePID.Actual = Angle;
+        PID_Update(&AnglePID);
+
+        AvePWM = -AnglePID.Out;
+
+        LeftPWM = AvePWM + (DifPWM / 2);
+        RightPWM = AvePWM - (DifPWM / 2);
+
+        if (LeftPWM > 100) { LeftPWM = 100; } else if (LeftPWM < -100) { LeftPWM = -100; }
+        if (RightPWM > 100) { RightPWM = 100; } else if (RightPWM < -100) { RightPWM = -100; }
+
+        Motor_SetPWM(1, LeftPWM);
+        Motor_SetPWM(2, RightPWM);
+      } else {
+        Motor_SetPWM(1, 0);
+        Motor_SetPWM(2, 0);
+        LED_OFF(0);
+        LED_OFF(1);
+      }
+    }
+    /************************车身状态读取**************************/
+    SpeedCount++;
+    if (SpeedCount >= 50) {
+      SpeedCount = 0;
+
+      LeftSpeed = (1.0f - speed_filter) * Encoder_Get(1) + speed_filter * LeftSpeed;
+      RightSpeed = (1.0f - speed_filter) * Encoder_Get(2) + speed_filter * RightSpeed;
+
+      AveSpeed = (LeftSpeed + RightSpeed) / 2.0f;
+      DifSpeed = LeftSpeed - RightSpeed;
+
+      SpeedPID.Actual = AveSpeed;
+      PID_Update(&SpeedPID);
+      AnglePID.Target = SpeedPID.Out;
+
+      TurnPID.Actual = DifSpeed;
+      PID_Update(&TurnPID);
+      DifPWM = TurnPID.Out;
+    }
+
+    __HAL_TIM_ENABLE_IT(htim, TIM_IT_UPDATE);
   }
 }
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+  if (huart == &huart3) {
+    u_dd++;
+    GRAY_ProcessByte(&hgray, rx_byte);
+    HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
+  }
+}
+
+// }
+// void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+// {
+//   if(huart == &huart3&&Size == 1)
+//   {
+//     u_dd++;
+//     GRAY_ProcessByte(&hgray, rx_byte);
+//     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, &rx_byte, 1);
+//   }
+// }
 /* USER CODE END 4 */
 
 /**

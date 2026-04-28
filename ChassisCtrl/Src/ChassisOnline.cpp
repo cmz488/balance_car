@@ -6,10 +6,10 @@
 #include <cstdint>
 
 extern "C" {
+#include "grayscale_tracker.h"
 }
 
-extern int16_t gray_offset;
-extern uint8_t gray_digital;
+extern GRAY_Data data;
 
 ChassisOnline::ChassisOnline(float target_speed, float kp, float ki, float kd) : target_speed_(target_speed) {
   PID_Init(&turn_angle_pid_);
@@ -20,7 +20,7 @@ ChassisOnline::ChassisOnline(float target_speed, float kp, float ki, float kd) :
 
 void ChassisOnline::update() {
     turn_angle_pid_.Target = 0.0f;
-    turn_angle_pid_.Actual = static_cast<float>(gray_offset);
+    turn_angle_pid_.Actual = static_cast<float>(data.offset);
     PID_Update(&turn_angle_pid_);
     speed_pid_->Target = target_speed_;
     diff_pwm_pid_->Target =turn_angle_pid_.Out;

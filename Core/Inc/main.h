@@ -65,6 +65,8 @@ void Error_Handler(void);
 #define LED1_GPIO_Port GPIOF
 #define BOTTON0_Pin GPIO_PIN_1
 #define BOTTON0_GPIO_Port GPIOC
+#define BUTTON2_Pin GPIO_PIN_0
+#define BUTTON2_GPIO_Port GPIOA
 #define A_MOTOR_ENCODER_1_Pin GPIO_PIN_1
 #define A_MOTOR_ENCODER_1_GPIO_Port GPIOA
 #define A_MOTOR_ENCODER_2_Pin GPIO_PIN_5

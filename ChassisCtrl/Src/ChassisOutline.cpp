@@ -10,8 +10,8 @@ extern "C" {
 extern  float Yaw;
 extern uint8_t outline_move_strategy_flag;
 
-ChassisOutline::ChassisOutline(float target_speed, float diff_speed, float kp, float ki,
-                               float kd) : target_speed_(target_speed), diff_speed_(diff_speed) {
+ChassisOutline::ChassisOutline(float target_speed, float kp, float ki,
+                               float kd) : target_speed_(target_speed) {
   PID_Init(&turn_angle_pid_);
   turn_angle_pid_.Kp = kp;
   turn_angle_pid_.Ki = ki;

@@ -88,6 +88,12 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(BOTTON0_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : BUTTON2_Pin */
+  GPIO_InitStruct.Pin = BUTTON2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(BUTTON2_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pin : AIN_1_Pin */
   GPIO_InitStruct.Pin = AIN_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;

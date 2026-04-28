@@ -8,21 +8,19 @@
 #include "main.h"
 #ifdef __cplusplus
 #include "ChassisStrategy.h"
-#include "ChassisOnline.h"
-#include "ChassisOutline.h"
 extern "C" {
 #endif
   void chassis_ctrl_update();
 #ifdef __cplusplus
 }
 #endif
-
-
 #ifdef __cplusplus
+
 class ChassisCtrl {
   ChassisStrategy *strategy_{nullptr};
-  uint8_t is_online_{0};
-
+  uint8_t is_online_{1};
+  uint8_t target_num{0};
+  uint8_t current_num{0};
 public:
   ChassisCtrl();
   void set_strategy(ChassisStrategy *strategy);
