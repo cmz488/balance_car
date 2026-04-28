@@ -223,7 +223,6 @@ int main(void) {
   while (1) {
     MPU6050_GetData(&AX, &AY, &AZ, &GX, &GY, &GZ);
 
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -312,8 +311,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
             choose_topic = 0; //状态清零
             outline_move_strategy_flag = 1; //straight
         }
-        LED_OFF(0);
-        LED_OFF(1);
       }
     }
     /*********************蜂鸣器逻辑*********************/
