@@ -361,12 +361,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 
     AngleCount++;
-    if (AngleCount > 10) {
+    if (AngleCount > 1) {
       AngleCount= 0;
       if (choose_topic) {
         // choose_topic为0时停止，其他值时根据选择的模式运动
-
-
         /*******************巡线逻辑封装***************************/
         chassis_ctrl_update();
         /********************计算欧拉角***********************/
@@ -405,7 +403,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     }
     /************************车身状态读取及速度环差速环控制**************************/
     SpeedCount++;
-    if (SpeedCount >= 50) {
+    if (SpeedCount >= 5) {
       SpeedCount = 0;
 
       LeftSpeed = (1.0f - speed_filter) * Encoder_Get(1) + speed_filter * LeftSpeed;

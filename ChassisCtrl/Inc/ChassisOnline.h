@@ -19,7 +19,6 @@ extern "C" {
 class ChassisOnline : public ChassisStrategy{
   float target_speed_;
   PID_t turn_angle_pid_;
-  uint8_t is_online_flag{0};
 public:
   ChassisOnline(float target_speed,float kp ,float ki ,float kd);
   ~ChassisOnline() override = default;

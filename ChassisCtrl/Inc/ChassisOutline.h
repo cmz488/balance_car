@@ -33,6 +33,7 @@ public:
   ~ChassisOutline() override = default;
   void update() override;
   void setOutlineMoveStrategy(OutlineMoveStrategy strategy) {outline_move_strategy = strategy;}
+  void clear() ;
 };
 #endif
 

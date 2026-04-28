@@ -66,7 +66,6 @@ void ChassisCtrl::set_mode() {
     if (strategy_ != &chassis_online) {
       PID_Clear(strategy_->speed_pid_);
       PID_Clear(strategy_->diff_pwm_pid_);
-
     }
     set_strategy(&chassis_online);
   } else {
