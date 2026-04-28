@@ -274,10 +274,10 @@ void SystemClock_Config(void) {
 
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  //定时器中断(10ms执行一次)过快会堵塞程序
+  //定时器中断(1ms执行一次)过快会堵塞程序
 
   if (htim->Instance == TIM5) {
-    __HAL_TIM_DISABLE_IT(htim, TIM_IT_UPDATE);
+    HAL_TIM_Base_Stop_IT(htim);
     key_scan();
     if (GRAY_IsDataReady(&hgray)) {
       data = GRAY_GetData(&hgray);
@@ -399,7 +399,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         LED_OFF(1);
       }
     }
-    /************************车身状态读取**************************/
+    /************************车身状态读取及速度环差速环控制**************************/
     SpeedCount++;
     if (SpeedCount >= 50) {
       SpeedCount = 0;
@@ -419,7 +419,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       DifPWM = TurnPID.Out;
     }
 
-    __HAL_TIM_ENABLE_IT(htim, TIM_IT_UPDATE);
+    HAL_TIM_Base_Start_IT(htim);
   }
 }
 
